@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Step 2: Security Groups for ALB and EC2'
+
+Resources:
+  # 1. ALB (ロードバランサー) 用のセキュリティグループ
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP from the internet
+      # 前のファイルで作ったVPCを参照する (ImportValueを使用)
+      VpcId: 
+        Fn::ImportValue: !Sub "${AWS::StackName}-VPCID"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0 # 全世界からのアクセスを許可
+
+  # 2. Webサーバー (EC2) 用のセキュリティグループ
+  WebserverSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP only from ALB
+      VpcId: 
+        Fn::ImportValue: !Sub "${AWS::StackName}-VPCID"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          # 【重要】ALB用のセキュリティグループからの通信のみ許可！
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+
+Outputs:
+  ALBSG:
+    Value: !Ref ALBSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-ALBSG"
+  WebserverSG:
+    Value: !Ref WebserverSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-WebserverSG"

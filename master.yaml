@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Root Stack - High Availability Web Infrastructure (Nested Stacks)'
+
+Resources:
+  # 1. Network Layer
+  NetworkStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      # S3上のURLを指定してください
+      TemplateURL: https://YOUR_BUCKET_NAME.s3.amazonaws.com/01_network.yaml
+      TimeoutInMinutes: 10
+
+  # 2. Security Layer
+  SecurityStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://YOUR_BUCKET_NAME.s3.amazonaws.com/02_security.yaml
+      Parameters:
+        # 親から子へパラメータを渡す
+        NetworkStackName: !GetAtt NetworkStack.StackName
+      TimeoutInMinutes: 5
+
+  # 3. Application Layer
+  AppStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://YOUR_BUCKET_NAME.s3.amazonaws.com/03_app.yaml
+      Parameters:
+        NetworkStackName: !GetAtt NetworkStack.StackName
+        SecurityStackName: !GetAtt SecurityStack.StackName
+      TimeoutInMinutes: 15
+
+Outputs:
+  WebsiteURL:
+    Description: "Application URL"
+    Value: !GetAtt AppStack.Outputs.ALBDNSName

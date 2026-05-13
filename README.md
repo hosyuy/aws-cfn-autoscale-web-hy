@@ -50,6 +50,7 @@ chmod +x scripts/deploy.sh
 
 # デプロイの実行
 ./scripts/deploy.sh
+```
 
 ## 💡 Design Decisions / 工夫した点
 

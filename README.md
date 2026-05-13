@@ -38,22 +38,20 @@ This project demonstrates the automation of a production-ready, multi-tier archi
     ├── security.yaml     # Security Groups
     └── app.yaml          # ALB, ASG, Launch Template
 
-##　Usage / 使い方
+## 📖 Usage / 使い方
 
-AWS CLI のセットアップが完了していることを確認してください。
-付属のデプロイスクリプトを実行するだけで、全インフラが構築されます。
+1. AWS CLI のセットアップが完了していることを確認してください。
+2. 付属のデプロイスクリプトを実行するだけで、全インフラが構築されます。
 
+```bash
 # 実行権限の付与 (初回のみ)
 chmod +x scripts/deploy.sh
 
 # デプロイの実行
 ./scripts/deploy.sh
 
+## 💡 Design Decisions / 工夫した点
 
-##　Design Decisions / 工夫した点
-
-Naming Consistency: SystemName パラメータによる一貫したリソース命名規則。
-
-Dynamic AMI Selection: SSMを利用し、常に最新の Amazon Linux 2023 AMI を自動取得。
-
-Separation of Concerns: ネットワーク、セキュリティ、アプリ層の責務を明確に分離し、保守性を向上。
+*   **Naming Consistency:** `SystemName` パラメータを親スタックから各子スタックへ引き渡す設計にし、環境全体のリソース命名規則を一貫させました。
+*   **Dynamic AMI Selection:** SSM Parameter Storeを利用し、常に最新の Amazon Linux 2023 AMI を自動的に選択するように構成しています。
+*   **Separation of Concerns:** ネットワーク、セキュリティ、アプリ層の責務を明確に分離（Nested Stacks）し、保守性の高いテンプレートを実現しました。

@@ -1,0 +1,11 @@
+# --- OS / IDE files ---
+.DS_Store
+.vscode/
+.devcontainer/
+
+# --- AWS / Deployment artifacts ---
+packaged.yaml
+session-manager-plugin.deb
+
+# --- Logs ---
+*.log

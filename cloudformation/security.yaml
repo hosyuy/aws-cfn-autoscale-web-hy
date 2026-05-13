@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Portfolio Project Step 2: Tiered Security Infrastructure (Security Groups)'
+
+# ==============================================================================
+# 設計思想: 防御層の多層化 (Defense in Depth)
+# ALBとEC2の間でセキュリティグループを連鎖(Chaining)させ、
+# インターネットからWebサーバへの直接アクセスを遮断する強固な防御を実装します。
+# ==============================================================================
+
+Parameters:
+  SystemName:
+    Type: String
+    Default: "my-portfolio-system"
+    Description: "システム全体のリソース命名規則を統一するための識別子"
+
+Resources:
+  # --- 1. ALB Security Group ---
+  # インターネットからのHTTPアクセスを許可する外壁の役割
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Allow HTTP from the internet"
+      VpcId: 
+        Fn::ImportValue: !Sub "${SystemName}-VPCID"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${SystemName}-alb-sg"
+
+  # --- 2. Web Server Security Group ---
+  # 💡 PORTFOLIO HIGHLIGHT: SG Chaining (セキュリティグループの数珠繋ぎ)
+  # 特定のIPアドレスではなく、ALBのSGからの通信のみを許可する。
+  # これにより、たとえインスタンスのPublic IPが漏洩しても直接の不正アクセスを防止します。
+  WebserverSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Allow HTTP ONLY from ALB Security Group"
+      VpcId: 
+        Fn::ImportValue: !Sub "${SystemName}-VPCID"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          # SG Chaining: セキュリティグループIDをソースとして指定
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${SystemName}-web-sg"
+
+# --- Cross-Stack Outputs ---
+# 他のスタック（Appスタックなど）で、これらのセキュリティグループIDを利用可能にします。
+Outputs:
+  ALBSG:
+    Value: !Ref ALBSecurityGroup
+    Export:
+      Name: !Sub "${SystemName}-ALBSG"
+  WebserverSG:
+    Value: !Ref WebserverSecurityGroup
+    Export:
+      Name: !Sub "${SystemName}-WebserverSG"

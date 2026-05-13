@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Portfolio Project: Master Stack for Multi-AZ Web Infrastructure using Nested Stacks'
+
+# ==============================================================================
+# 設計思想: 疎結合なモジュール管理 (Loosely Coupled Modules)
+# テンプレートを分離することで、各レイヤーの独立性を高め、メンテナンスコストを削減します。
+# ==============================================================================
+
+Parameters:
+  SystemName:
+    Type: String
+    Default: "my-portfolio-system"
+    Description: "リソース名やExport名に使用する共通プレフィックス"
+
+Resources:
+  # --- 1. Network Layer (VPC & Subnets) ---
+  NetworkStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      # 💡 実際のファイル名に合わせて ./network.yaml に修正！
+      TemplateURL: ./network.yaml
+      Parameters:
+        SystemName: !Ref SystemName
+
+  # --- 2. Security Layer (Security Groups) ---
+  SecurityStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: NetworkStack
+    Properties:
+      # 💡 実際のファイル名に合わせて ./security.yaml に修正！
+      TemplateURL: ./security.yaml
+      Parameters:
+        SystemName: !Ref SystemName
+
+  # --- 3. Application Layer (ALB, ASG, EC2) ---
+  AppStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: SecurityStack
+    Properties:
+      # 💡 実際のファイル名に合わせて ./app.yaml に修正！
+      TemplateURL: ./app.yaml
+      Parameters:
+        SystemName: !Ref SystemName

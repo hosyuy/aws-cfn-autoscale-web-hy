@@ -1,38 +1,59 @@
-
-Markdown
-# Auto-Scaling Web Infrastructure (AWS CloudFormation)
+# High-Availability Auto-Scaling Web Infrastructure (AWS CloudFormation)
 
 ## 🌐 Project Overview / プロジェクト概要
 
-AWS CloudFormationを使用した、スケーラブルで耐障害性の高いWebインフラの自動構築プロジェクトです。**IaC (Infrastructure as Code)** を採用することで、手動設定を排除し、一貫性があり再現可能なデプロイを実現しています。
-This project demonstrates the automation of a production-ready web architecture. By using **Infrastructure as Code (IaC)**, we ensure consistent and repeatable deployments of a highly available web server environment.
+AWS CloudFormationを使用した、スケーラブルで耐障害性の高いWebインフラの自動構築プロジェクトです。**Nested Stacks（入れ子構造）** を採用することで、各レイヤー（ネットワーク、セキュリティ、アプリ）の独立性を高め、実務レベルの **Infrastructure as Code (IaC)** を実現しています。
+
+This project demonstrates the automation of a production-ready, multi-tier architecture. By leveraging **Nested Stacks**, we ensure high maintainability and modularity in a scalable AWS environment.
 
 ## 🚀 Key Features / 主な機能
-* **High Availability (Multi-AZ):**高可用性 (Multi-AZ):** 複数のAZにインスタンスを分散配置し、単一障害点を排除した設計。
-  
-* **Auto Scaling:** オートスケーリング:** CPU利用率に応じてインスタンス数を自動増減させ、負荷分散とコスト最適化を両立。
-   
-* **Load Balancing (ALB):** 負荷分散 (ALB):** Application Load Balancerによるトラフィック分散と、正常なインスタンスへの自動ルーティング。
-    
-* **Security Best Practices:** セキュリティ:** セキュリティグループによる最小権限の原則（Least Privilege）を適用。
 
+*   **Modular Architecture (Nested Stacks):** ネットワーク、セキュリティ、アプリケーションの各レイヤーを分離。
+*   **High Availability (Multi-AZ):** 2つのAZを利用し、データセンターレベルの障害に対応した冗長構成。
+*   **Auto Scaling & Self-Healing:** 負荷に応じた自動増減と、異常インスタンスの自動交換機能を搭載。
+*   **Secure Access Management:** SSH(Port 22)を閉じ、**AWS Systems Manager (SSM)** 経由で管理を行うセキュアな設計。
+*   **One-Click Deployment:** 複雑なデプロイ工程をシェルスクリプトで完全自動化。
 
 ## 🏗 Architecture / 構成図
 
-
+*(Note: Please replace this with your own architecture diagram image!)*
 
 ## 🛠 Tech Stack / 使用技術
-* **Infrastructure:** AWS (CloudFormation)
-* **Compute:** EC2 (Auto Scaling Group)
-* **Networking:** VPC, Public Subnets, Application Load Balancer
-* **Security:** IAM Roles, Security Groups
 
-## 📖 Usage / 使い方
-1.  Ensure you have an AWS account and CLI configured.
-2.  Deploy the template using the AWS Management Console or CLI:
-    ```bash
-    aws cloudformation create-stack --stack-name my-web-stack --template-body file://template.yaml --parameters ParameterKey=VPCID,ParameterValue=your-vpc-id
-    ```
+*   **IaC:** AWS CloudFormation (YAML), Bash Script
+*   **Compute:** EC2 (Amazon Linux 2023), Auto Scaling Group
+*   **Networking:** VPC, Public Subnets (Multi-AZ), Internet Gateway, ALB
+*   **Security:** IAM Roles/Instance Profiles, Security Groups (SG Chaining)
 
-## 💡 Author's Note / 工夫した点
-実務での運用を意識し、**モジュール化**と**拡張性**に注力しました。パラメータ化を徹底することで、開発・ステージング・本番など異なる環境でも再利用可能な設計にしています。
+## 📂 Directory Structure / フォルダ構成
+
+```text
+.
+├── README.md
+├── scripts/
+│   └── deploy.sh         # デプロイ自動化スクリプト
+└── cloudformation/
+    ├── master.yaml       # 全体を統括する親スタック
+    ├── network.yaml      # VPC, Subnet, IGW 等
+    ├── security.yaml     # Security Groups
+    └── app.yaml          # ALB, ASG, Launch Template
+
+##　Usage / 使い方
+
+AWS CLI のセットアップが完了していることを確認してください。
+付属のデプロイスクリプトを実行するだけで、全インフラが構築されます。
+
+# 実行権限の付与 (初回のみ)
+chmod +x scripts/deploy.sh
+
+# デプロイの実行
+./scripts/deploy.sh
+
+
+##　Design Decisions / 工夫した点
+
+Naming Consistency: SystemName パラメータによる一貫したリソース命名規則。
+
+Dynamic AMI Selection: SSMを利用し、常に最新の Amazon Linux 2023 AMI を自動取得。
+
+Separation of Concerns: ネットワーク、セキュリティ、アプリ層の責務を明確に分離し、保守性を向上。

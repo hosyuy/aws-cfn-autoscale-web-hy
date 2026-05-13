@@ -1,0 +1,132 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Portfolio Project Step 3: Highly Available Web Tier (ALB + ASG) with Dynamic Amazon Linux 2023 AMI'
+
+# ==============================================================================
+# 設計思想: 高可用性(HA)と運用自動化
+# 複数のAZにまたがる負荷分散と、最新AMIの動的取得、UserDataによるプロビジョニングにより、
+# 手動操作を排除した「不変のインフラ(Immutable Infrastructure)」の基盤を構築します。
+# ==============================================================================
+
+Parameters:
+  SystemName:
+    Type: String
+    Default: "my-portfolio-system"
+    Description: "スタック間でリソースを共有するための共通識別子"
+
+  # 💡 PORTFOLIO HIGHLIGHT: Dynamic AMI Resolution
+  # SSM Parameter Storeから最新のAL2023のAMI IDを自動取得。
+  # 常に最新のセキュリティパッチが適用された状態でデプロイが可能です。
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64'
+
+Resources:
+  # --- 1. IAM Role & Instance Profile ---
+  # 💡 PORTFOLIO HIGHLIGHT: Session Managerによるセキュアアクセス
+  # SSHポートを閉じたまま、SSM経由で安全にインスタンスを管理する最小権限（Least Privilege）設計。
+  SSMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [ec2.amazonaws.com]
+            Action: ["sts:AssumeRole"]
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+  WebInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref SSMRole]
+
+  # --- 2. Target Group ---
+  # ヘルスチェックを行い、正常なインスタンスにのみ通信を振り分ける
+  WebTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      # 名前の重複を避けるため SystemName を使用
+      Name: !Sub "${SystemName}-tg"
+      VpcId: { "Fn::ImportValue": !Sub "${SystemName}-VPCID" }
+      Protocol: HTTP
+      Port: 80
+      TargetType: instance
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /index.html
+      Matcher:
+        HttpCode: 200
+
+  # --- 3. Application Load Balancer (ALB) ---
+  # 💡 PORTFOLIO HIGHLIGHT: マルチAZによる単一障害点の排除
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub "${SystemName}-alb"
+      Scheme: internet-facing
+      SecurityGroups:
+        - { "Fn::ImportValue": !Sub "${SystemName}-ALBSG" }
+      Subnets:
+        - { "Fn::ImportValue": !Sub "${SystemName}-Subnet1" }
+        - { "Fn::ImportValue": !Sub "${SystemName}-Subnet2" }
+
+  # --- 4. ALB Listener ---
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref WebTargetGroup
+
+  # --- 5. Launch Template ---
+  # サーバーの「設計図」。UserDataにより起動時にApacheを自動セットアップ。
+  WebLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub "${SystemName}-launch-template"
+      LaunchTemplateData:
+        ImageId: !Ref LatestAmiId
+        InstanceType: t2.micro
+        IamInstanceProfile:
+          Name: !Ref WebInstanceProfile
+        SecurityGroupIds:
+          - { "Fn::ImportValue": !Sub "${SystemName}-WebserverSG" }
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            until dnf install -y httpd; do
+              echo "Waiting for dnf lock..."
+              sleep 5
+            done
+            systemctl start httpd
+            systemctl enable httpd
+            echo "<h1>Hello from AWS Hands-on Project! (Automated by CloudFormation & AL2023)</h1>" > /var/www/html/index.html
+            chmod 644 /var/www/html/index.html
+
+  # --- 6. Auto Scaling Group (ASG) ---
+  # 💡 PORTFOLIO HIGHLIGHT: 自己修復機能 (Self-Healing)
+  # 最小2台構成により、1台がダウンしてもサービスを継続し、自動で代替機を起動します。
+  WebASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub "${SystemName}-asg"
+      VPCZoneIdentifier:
+        - { "Fn::ImportValue": !Sub "${SystemName}-Subnet1" }
+        - { "Fn::ImportValue": !Sub "${SystemName}-Subnet2" }
+      LaunchTemplate:
+        LaunchTemplateId: !Ref WebLaunchTemplate
+        Version: !GetAtt WebLaunchTemplate.LatestVersionNumber
+      MinSize: '2'
+      MaxSize: '4'
+      DesiredCapacity: '2'
+      TargetGroupARNs:
+        - !Ref WebTargetGroup
+
+Outputs:
+  ALBDNSName:
+    Description: "アプリケーションへのアクセスポイントとなるALBのDNS名"
+    Value: !GetAtt ALB.DNSName

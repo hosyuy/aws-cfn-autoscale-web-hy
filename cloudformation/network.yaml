@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Portfolio Project Step 1: Highly Available Multi-AZ Network Infrastructure'
+
+# ==============================================================================
+# 設計思想: 可用性とスケーラビリティを担保したネットワーク基盤
+# 2つのAvailability Zone(AZ)を利用した冗長化構成をコードで定義します。
+# ==============================================================================
+
+Parameters:
+  SystemName:
+    Type: String
+    Default: "my-portfolio-system"
+    Description: "システム全体のリソース命名規則を統一するための識別子"
+
+Resources:
+  # --- 1. Virtual Private Cloud (VPC) ---
+  # AWS上に構築する論理的に隔離された仮想ネットワーク環境
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${SystemName}-vpc"
+
+  # --- 2. Internet Gateway (IGW) ---
+  # VPC内のパブリックサブネットとインターネット間の双方向通信を可能にするゲートウェイ
+  MyInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${SystemName}-igw"
+
+  # IGWをVPCにアタッチ
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MyVPC
+      InternetGatewayId: !Ref MyInternetGateway
+
+  # --- 3. Public Subnets (Multi-AZ Design) ---
+  # 💡 PORTFOLIO HIGHLIGHT: 2つのAZに分散配置することで、片方のDC障害時も継続稼働が可能
+  
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [ 0, !GetAZs '' ] # 1番目のAZを選択
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${SystemName}-public-1a"
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [ 1, !GetAZs '' ] # 2番目のAZを選択
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${SystemName}-public-1c"
+
+  # --- 4. Routing Table & Route Configuration ---
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${SystemName}-public-rt"
+
+  # デフォルトルート設定: すべての宛先(0.0.0.0/0)への通信をIGWへ転送
+  DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref MyInternetGateway
+
+  # 各サブネットとルートテーブルの紐付け
+  Subnet1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  Subnet2Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+# --- Cross-Stack Outputs ---
+# 💡 PORTFOLIO HIGHLIGHT: 共通パラメータ SystemName を利用した Export 設計
+# これにより Nested Stacks 間での疎結合な連携を実現します。
+Outputs:
+  VPCID:
+    Value: !Ref MyVPC
+    Export:
+      Name: !Sub "${SystemName}-VPCID"
+  Subnet1:
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub "${SystemName}-Subnet1"
+  Subnet2:
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub "${SystemName}-Subnet2"

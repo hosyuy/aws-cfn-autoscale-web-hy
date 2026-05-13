@@ -6,6 +6,20 @@ AWS CloudFormationを使用した、スケーラブルで耐障害性の高いWe
 
 This project demonstrates the automation of a production-ready, multi-tier architecture. By leveraging **Nested Stacks**, we ensure high maintainability and modularity in a scalable AWS environment.
 
+---
+## 💡 Project Background & Process / 開発の経緯とプロセス
+
+### 🛠 Background / きっかけ
+私はインフラエンジニアとしてのバックグラウンドを持っており、実務において環境構築の正確性とスピードがいかに重要かを実感してきました。
+「まずは自分が理想とするインフラ環境を、ボタン一つで自動構築できる仕組みを作りたい」という強い動機から、このプロジェクトはスタートしました。手動設定によるヒューマンエラーを排除し、一貫性のあるプロビジョニングを実現することが、私のエンジニアとしての第一歩です。
+
+### 🚀 Process / 開発の流れ
+本プロジェクトは、LLM（Gemini）を技術アドバイザーとして活用し、インフラ出身者としての知見と最新の AI 技術を融合させて構築しました。
+
+*   **AI-Assisted IaC Design:** LLM と対話しながら、モジュール化（Nested Stacks）を意識した設計図を作成。インフラ構成のベストプラクティスを議論しながらテンプレートを磨き上げました。
+*   **Verification & Review:** 生成されたコードに対し、AWS 公式ドキュメントに基づいた厳格なレビューと動作検証を自ら実施。インフラエンジニアとしての「妥協しない正確性」を重視しました。
+*   **Infrastructure Automation:** パッケージングからデプロイまでを Bash スクリプトで自動化。インフラ管理の運用負荷を最小限に抑える設計を追求しました。
+
 ## 🚀 Key Features / 主な機能
 
 *   **Modular Architecture (Nested Stacks):** ネットワーク、セキュリティ、アプリケーションの各レイヤーを分離。

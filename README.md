@@ -37,6 +37,7 @@ This project demonstrates the automation of a production-ready, multi-tier archi
     ├── network.yaml      # VPC, Subnet, IGW 等
     ├── security.yaml     # Security Groups
     └── app.yaml          # ALB, ASG, Launch Template
+```
 
 ## 📖 Usage / 使い方
 

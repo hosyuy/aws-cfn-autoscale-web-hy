@@ -9,35 +9,45 @@ Description: 'Portfolio Project: Master Stack for Multi-AZ Web Infrastructure us
 Parameters:
   SystemName:
     Type: String
-    Default: "my-portfolio-system"
-    Description: "リソース名やExport名に使用する共通プレフィックス"
+    Default: "my-portfolio-app"
+    Description: "リソースの命名規則およびスタック間参照（Export/Import）の共通プレフィックス"
 
 Resources:
-  # --- 1. Network Layer (VPC & Subnets) ---
+  # ------------------------------------------------------------
+  # 1. ネットワークレイヤー (VPC & Subnets)
+  # マルチAZを考慮した基盤インフラを構築。
+  # 可用性を高めるため、パブリックおよびプライベートサブネットを各AZに配置。
+  # ------------------------------------------------------------
   NetworkStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      # 💡 実際のファイル名に合わせて ./network.yaml に修正！
+      # S3バケットにアップロードしたテンプレートのURLを指定
       TemplateURL: ./network.yaml
       Parameters:
         SystemName: !Ref SystemName
 
-  # --- 2. Security Layer (Security Groups) ---
+  # ------------------------------------------------------------
+  # 2. セキュリティレイヤー (Security Groups)
+  # 最小権限の原則（Principle of Least Privilege）に基づき、
+  # ALB用およびEC2用のセキュリティグループを定義。
+  # ------------------------------------------------------------
   SecurityStack:
     Type: AWS::CloudFormation::Stack
-    DependsOn: NetworkStack
+    DependsOn: NetworkStack # ネットワーク基盤の完成を待機
     Properties:
-      # 💡 実際のファイル名に合わせて ./security.yaml に修正！
       TemplateURL: ./security.yaml
       Parameters:
         SystemName: !Ref SystemName
 
-  # --- 3. Application Layer (ALB, ASG, EC2) ---
+  # ------------------------------------------------------------
+  # 3. アプリケーションレイヤー (ALB, ASG, EC2)
+  # スケーラビリティを担保するため、Auto Scaling Groupと
+  # Application Load Balancerを組み合わせた高可用性Webサーバーをデプロイ。
+  # ------------------------------------------------------------
   AppStack:
     Type: AWS::CloudFormation::Stack
-    DependsOn: SecurityStack
+    DependsOn: SecurityStack # セキュリティ設定の完了を待機
     Properties:
-      # 💡 実際のファイル名に合わせて ./app.yaml に修正！
       TemplateURL: ./app.yaml
       Parameters:
         SystemName: !Ref SystemName

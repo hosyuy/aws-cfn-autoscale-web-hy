@@ -30,7 +30,11 @@ This project demonstrates the automation of a production-ready, multi-tier archi
 
 ## 🏗 Architecture / 構成図
 
-*(Note: Please replace this with your own architecture diagram image!)*
+![Architecture Diagram](./images/aws-cfn-autoscale-web-hy-arch.png)
+ecture
+* **Public Multi-AZ**: 2つの可用性ゾーン(AZ-a, AZ-c)を利用した高可用性構成。
+* **Auto Scaling**: トラフィックに応じて、パブリックサブネット内のインスタンスを自動増減。
+* **Elastic Load Balancing**: ALBを使用して外部からのリクエストを効率的に分散。
 
 ## 🛠 Tech Stack / 使用技術
 
